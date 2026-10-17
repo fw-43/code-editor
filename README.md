@@ -1,5 +1,8 @@
 # Code-Editor
 
 ## Run on Local
-`./gradlew spotlessApply clean build run --args="$HOME/data/workspace/projects/"`
-
+```bash
+./gradlew spotlessApply clean build installDist
+# requires custom bash script
+code N-project-name
+```

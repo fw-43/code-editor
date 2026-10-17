@@ -1,5 +1,10 @@
 package com.fw.codeeditor.editor;
 
+import static com.fw.codeeditor.constants.AppConstants.APP_DIVIDER_LOCATION;
+import static com.fw.codeeditor.constants.AppConstants.APP_HEIGHT;
+import static com.fw.codeeditor.constants.AppConstants.APP_NAME;
+import static com.fw.codeeditor.constants.AppConstants.APP_WIDTH;
+
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Toolkit;
@@ -26,15 +31,15 @@ public final class EditorFrame extends JFrame {
   private Path root;
 
   public EditorFrame(Path root) {
-    super("code-editor");
+    super(APP_NAME);
     this.root = root;
     setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
-    setSize(1200, 800);
+    setSize(APP_WIDTH, APP_HEIGHT);
     setLocationRelativeTo(null);
     setLayout(new BorderLayout());
     tabs.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
     split.setRightComponent(tabs);
-    split.setDividerLocation(260);
+    split.setDividerLocation(APP_DIVIDER_LOCATION);
     add(split, BorderLayout.CENTER);
     showTree();
     setJMenuBar(buildMenuBar());
@@ -55,7 +60,7 @@ public final class EditorFrame extends JFrame {
     JScrollPane scroll = new JScrollPane(tree);
     scroll.setMinimumSize(new Dimension(150, 100));
     split.setLeftComponent(scroll);
-    setTitle("code-editor - " + root);
+    setTitle(APP_NAME + " - " + root);
   }
 
   private JMenuBar buildMenuBar() {
@@ -170,6 +175,6 @@ public final class EditorFrame extends JFrame {
   }
 
   private void showError(String message) {
-    JOptionPane.showMessageDialog(this, message, "code-editor", JOptionPane.ERROR_MESSAGE);
+    JOptionPane.showMessageDialog(this, message, APP_NAME, JOptionPane.ERROR_MESSAGE);
   }
 }
