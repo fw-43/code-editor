@@ -4,6 +4,12 @@ import static com.fw.codeeditor.constants.AppConstants.APP_DIVIDER_LOCATION;
 import static com.fw.codeeditor.constants.AppConstants.APP_HEIGHT;
 import static com.fw.codeeditor.constants.AppConstants.APP_NAME;
 import static com.fw.codeeditor.constants.AppConstants.APP_WIDTH;
+import static com.fw.codeeditor.constants.AppConstants.JMENU_CLOSE_TAB;
+import static com.fw.codeeditor.constants.AppConstants.JMENU_FILE;
+import static com.fw.codeeditor.constants.AppConstants.JMENU_OPEN_FOLDER;
+import static com.fw.codeeditor.constants.AppConstants.JMENU_SAVE;
+import static com.fw.codeeditor.constants.AppConstants.JSCROLLPANE_MIN_HEIGHT;
+import static com.fw.codeeditor.constants.AppConstants.JSCROLLPANE_MIN_WIDTH;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -58,17 +64,17 @@ public final class EditorFrame extends JFrame {
   private void showTree() {
     FileTree tree = new FileTree(root, this::openFile);
     JScrollPane scroll = new JScrollPane(tree);
-    scroll.setMinimumSize(new Dimension(150, 100));
+    scroll.setMinimumSize(new Dimension(JSCROLLPANE_MIN_WIDTH, JSCROLLPANE_MIN_HEIGHT));
     split.setLeftComponent(scroll);
     setTitle(APP_NAME + " - " + root);
   }
 
   private JMenuBar buildMenuBar() {
     int mask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
-    JMenu file = new JMenu("File");
-    file.add(item("Open Folder...", KeyEvent.VK_O, mask, this::chooseFolder));
-    file.add(item("Save", KeyEvent.VK_S, mask, this::saveCurrent));
-    file.add(item("Close Tab", KeyEvent.VK_W, mask, this::closeCurrent));
+    JMenu file = new JMenu(JMENU_FILE);
+    file.add(item(JMENU_OPEN_FOLDER, KeyEvent.VK_O, mask, this::chooseFolder));
+    file.add(item(JMENU_SAVE, KeyEvent.VK_S, mask, this::saveCurrent));
+    file.add(item(JMENU_CLOSE_TAB, KeyEvent.VK_W, mask, this::closeCurrent));
     JMenuBar bar = new JMenuBar();
     bar.add(file);
     return bar;

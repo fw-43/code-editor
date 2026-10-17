@@ -3,8 +3,6 @@ package com.fw.codeeditor.editor;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -55,24 +53,6 @@ public final class FileTree extends JTree {
           public void treeWillCollapse(TreeExpansionEvent event) {}
         });
 
-    addMouseListener(
-        new MouseAdapter() {
-          @Override
-          public void mouseClicked(MouseEvent e) {
-            if (e.getClickCount() != 2) {
-              return;
-            }
-            TreePath clicked = getPathForLocation(e.getX(), e.getY());
-            if (clicked == null) {
-              return;
-            }
-            Object value =
-                ((DefaultMutableTreeNode) clicked.getLastPathComponent()).getUserObject();
-            if (value instanceof Path p && Files.isRegularFile(p)) {
-              FileTree.this.onOpenFile.accept(p);
-            }
-          }
-        });
     bindEnterKey();
   }
 
