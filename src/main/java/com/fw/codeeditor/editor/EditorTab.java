@@ -44,7 +44,7 @@ public final class EditorTab extends RTextScrollPane {
     textArea.setSyntaxEditingStyle(syntaxFor(path));
     textArea.setCodeFoldingEnabled(true);
     textArea.setTabsEmulated(true);
-    textArea.setTabSize(4);
+    textArea.setTabSize(2);
     textArea.setText(Files.readString(path, StandardCharsets.UTF_8));
     textArea.setCaretPosition(0);
     textArea.discardAllEdits();
