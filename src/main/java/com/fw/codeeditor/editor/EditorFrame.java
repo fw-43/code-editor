@@ -13,6 +13,7 @@ import static com.fw.codeeditor.constants.AppConstants.JSCROLLPANE_MIN_WIDTH;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.KeyboardFocusManager;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
@@ -35,6 +36,7 @@ public final class EditorFrame extends JFrame {
   private final JTabbedPane tabs = new JTabbedPane();
   private final JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
   private Path root;
+  private FileTree tree;
 
   public EditorFrame(Path root) {
     super(APP_NAME);
@@ -49,6 +51,7 @@ public final class EditorFrame extends JFrame {
     add(split, BorderLayout.CENTER);
     showTree();
     setJMenuBar(buildMenuBar());
+    installTabSwitchKeys();
     addWindowListener(
         new WindowAdapter() {
           @Override
@@ -61,8 +64,44 @@ public final class EditorFrame extends JFrame {
         });
   }
 
+  private void installTabSwitchKeys() {
+    KeyboardFocusManager.getCurrentKeyboardFocusManager()
+        .addKeyEventDispatcher(
+            e -> {
+              if (!isActive()
+                  || e.getID() != KeyEvent.KEY_PRESSED
+                  || !e.isControlDown()
+                  || e.isShiftDown()
+                  || e.isAltDown()) {
+                return false;
+              }
+              if (e.getKeyCode() == KeyEvent.VK_PAGE_UP) {
+                switchTab(-1);
+                return true;
+              }
+              if (e.getKeyCode() == KeyEvent.VK_PAGE_DOWN) {
+                switchTab(1);
+                return true;
+              }
+              return false;
+            });
+  }
+
+  private void switchTab(int delta) {
+    int count = tabs.getTabCount();
+    if (count < 2) {
+      return;
+    }
+    int next = (tabs.getSelectedIndex() + delta + count) % count;
+    tabs.setSelectedIndex(next);
+    ((EditorTab) tabs.getComponentAt(next)).focusEditor();
+  }
+
   private void showTree() {
-    FileTree tree = new FileTree(root, this::openFile);
+    if (tree != null) {
+      tree.close();
+    }
+    tree = new FileTree(root, this::openFile);
     JScrollPane scroll = new JScrollPane(tree);
     scroll.setMinimumSize(new Dimension(JSCROLLPANE_MIN_WIDTH, JSCROLLPANE_MIN_HEIGHT));
     split.setLeftComponent(scroll);
