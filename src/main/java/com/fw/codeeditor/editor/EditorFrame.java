@@ -4,6 +4,7 @@ import static com.fw.codeeditor.constants.AppConstants.APP_DIVIDER_LOCATION;
 import static com.fw.codeeditor.constants.AppConstants.APP_HEIGHT;
 import static com.fw.codeeditor.constants.AppConstants.APP_NAME;
 import static com.fw.codeeditor.constants.AppConstants.APP_WIDTH;
+import static com.fw.codeeditor.constants.AppConstants.DISK_CHECK_INTERVAL_MS;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_CLOSE_TAB;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_FILE;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_OPEN_FOLDER;
@@ -30,6 +31,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.KeyStroke;
+import javax.swing.Timer;
 
 public final class EditorFrame extends JFrame {
 
@@ -37,6 +39,9 @@ public final class EditorFrame extends JFrame {
   private final JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
   private Path root;
   private FileTree tree;
+  private final Timer diskCheckTimer =
+      new Timer(DISK_CHECK_INTERVAL_MS, e -> checkOpenTabsForExternalChanges());
+  private boolean checkingDisk;
 
   public EditorFrame(Path root) {
     super(APP_NAME);
@@ -52,6 +57,7 @@ public final class EditorFrame extends JFrame {
     showTree();
     setJMenuBar(buildMenuBar());
     installTabSwitchKeys();
+    diskCheckTimer.start();
     addWindowListener(
         new WindowAdapter() {
           @Override
@@ -217,6 +223,49 @@ public final class EditorFrame extends JFrame {
       case JOptionPane.NO_OPTION -> true;
       default -> false;
     };
+  }
+
+  private void checkOpenTabsForExternalChanges() {
+    if (checkingDisk) {
+      return; // a prompt is already open
+    }
+    checkingDisk = true;
+    try {
+      for (int i = 0; i < tabs.getTabCount(); i++) {
+        EditorTab tab = (EditorTab) tabs.getComponentAt(i);
+        if (!tab.changedOnDisk()) {
+          continue;
+        }
+        if (tab.isDirty()) {
+          if (!isActive()) {
+            continue; // ask later, when the window is in front
+          }
+          if (!confirmReload(tab)) {
+            tab.ignoreDiskChange();
+            continue;
+          }
+        }
+        try {
+          tab.reload();
+        } catch (IOException e) {
+          // file may be mid-write; the next tick tries again
+        }
+      }
+    } finally {
+      checkingDisk = false;
+    }
+  }
+
+  private boolean confirmReload(EditorTab tab) {
+    int choice =
+        JOptionPane.showConfirmDialog(
+            this,
+            tab.path().getFileName()
+                + " changed on disk, but you have unsaved edits.\n"
+                + "Reload from disk and discard your edits?",
+            "File changed on disk",
+            JOptionPane.YES_NO_OPTION);
+    return choice == JOptionPane.YES_OPTION;
   }
 
   private void showError(String message) {

@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.Map;
 import java.util.function.Consumer;
+import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -34,6 +36,9 @@ public final class EditorTab extends RTextScrollPane {
   private final RSyntaxTextArea textArea;
   private final Path path;
   private boolean dirty;
+  private FileTime knownModified;
+  private long knownSize;
+  private boolean loading;
   private Consumer<EditorTab> onDirtyChanged = tab -> {};
 
   public EditorTab(Path path) throws IOException {
@@ -45,6 +50,7 @@ public final class EditorTab extends RTextScrollPane {
     textArea.setCodeFoldingEnabled(true);
     textArea.setTabsEmulated(true);
     textArea.setTabSize(2);
+    rememberDiskState();
     textArea.setText(Files.readString(path, StandardCharsets.UTF_8));
     textArea.setCaretPosition(0);
     textArea.discardAllEdits();
@@ -95,10 +101,62 @@ public final class EditorTab extends RTextScrollPane {
 
   public void save() throws IOException {
     Files.writeString(path, textArea.getText(), StandardCharsets.UTF_8);
+    rememberDiskState();
     setDirty(false);
   }
 
+  /** True if the file on disk is different from what this tab last read or wrote. */
+  public boolean changedOnDisk() {
+    try {
+      return !Files.getLastModifiedTime(path).equals(knownModified)
+          || Files.size(path) != knownSize;
+    } catch (IOException e) {
+      return false; // deleted or unreadable: keep what is in the editor
+    }
+  }
+
+  /** Stops asking about the current disk version, e.g. after the user chose to keep their edits. */
+  public void ignoreDiskChange() {
+    rememberDiskState();
+  }
+
+  public void reload() throws IOException {
+    FileTime modified = Files.getLastModifiedTime(path);
+    long size = Files.size(path);
+    String text = Files.readString(path, StandardCharsets.UTF_8);
+    knownModified = modified;
+    knownSize = size;
+    if (text.equals(textArea.getText())) {
+      setDirty(false);
+      return;
+    }
+    int caret = textArea.getCaretPosition();
+    int scroll = getVerticalScrollBar().getValue();
+    loading = true;
+    try {
+      textArea.setText(text);
+    } finally {
+      loading = false;
+    }
+    textArea.setCaretPosition(Math.min(caret, textArea.getDocument().getLength()));
+    textArea.discardAllEdits();
+    setDirty(false);
+    SwingUtilities.invokeLater(() -> getVerticalScrollBar().setValue(scroll));
+  }
+
+  private void rememberDiskState() {
+    try {
+      knownModified = Files.getLastModifiedTime(path);
+      knownSize = Files.size(path);
+    } catch (IOException e) {
+      // leave the previous values; the next check will compare against them
+    }
+  }
+
   private void markDirty() {
+    if (loading) {
+      return;
+    }
     setDirty(true);
   }
 
