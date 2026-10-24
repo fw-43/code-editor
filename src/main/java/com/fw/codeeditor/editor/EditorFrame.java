@@ -197,9 +197,9 @@ public final class EditorFrame extends JFrame {
   }
 
   private void refreshTitle(EditorTab tab) {
-    int index = tabs.indexOfComponent(tab);
-    if (index >= 0) {
-      tabs.setTitleAt(index, (tab.isDirty() ? "* " : "") + tab.path().getFileName());
+    int tabIndex = tabs.indexOfComponent(tab);
+    if (tabIndex >= 0) {
+      tabs.setTitleAt(tabIndex, (tab.isDirty() ? "* " : "") + tab.path().getFileName());
     }
   }
 
