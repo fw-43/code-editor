@@ -5,22 +5,37 @@ import static com.fw.codeeditor.constants.AppConstants.APP_HEIGHT;
 import static com.fw.codeeditor.constants.AppConstants.APP_NAME;
 import static com.fw.codeeditor.constants.AppConstants.APP_WIDTH;
 import static com.fw.codeeditor.constants.AppConstants.DISK_CHECK_INTERVAL_MS;
+import static com.fw.codeeditor.constants.AppConstants.JMENU_BACK;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_CLOSE_TAB;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_FILE;
+import static com.fw.codeeditor.constants.AppConstants.JMENU_GO_TO_DEFINITION;
+import static com.fw.codeeditor.constants.AppConstants.JMENU_GO_TO_IMPLEMENTATION;
+import static com.fw.codeeditor.constants.AppConstants.JMENU_NAVIGATE;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_OPEN_FOLDER;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_SAVE;
 import static com.fw.codeeditor.constants.AppConstants.JSCROLLPANE_MIN_HEIGHT;
 import static com.fw.codeeditor.constants.AppConstants.JSCROLLPANE_MIN_WIDTH;
 
+import com.fw.codeeditor.index.Symbol;
+import com.fw.codeeditor.index.SymbolIndex;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.KeyboardFocusManager;
 import java.awt.Toolkit;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Deque;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -42,6 +57,19 @@ public final class EditorFrame extends JFrame {
   private final Timer diskCheckTimer =
       new Timer(DISK_CHECK_INTERVAL_MS, e -> checkOpenTabsForExternalChanges());
   private boolean checkingDisk;
+  private volatile SymbolIndex index;
+  private volatile Path indexRoot;
+  private final AtomicBoolean indexQueued = new AtomicBoolean();
+  private final ExecutorService indexer =
+      Executors.newSingleThreadExecutor(
+          r -> {
+            Thread thread = new Thread(r, "symbol-indexer");
+            thread.setDaemon(true);
+            return thread;
+          });
+  private final Deque<Location> backStack = new ArrayDeque<>();
+
+  private record Location(Path path, int line) {}
 
   public EditorFrame(Path root) {
     super(APP_NAME);
@@ -112,6 +140,8 @@ public final class EditorFrame extends JFrame {
     scroll.setMinimumSize(new Dimension(JSCROLLPANE_MIN_WIDTH, JSCROLLPANE_MIN_HEIGHT));
     split.setLeftComponent(scroll);
     setTitle(APP_NAME + " - " + root);
+    index = null;
+    refreshIndex();
   }
 
   private JMenuBar buildMenuBar() {
@@ -122,6 +152,11 @@ public final class EditorFrame extends JFrame {
     file.add(item(JMENU_CLOSE_TAB, KeyEvent.VK_W, mask, this::closeCurrent));
     JMenuBar bar = new JMenuBar();
     bar.add(file);
+    JMenu navigate = new JMenu(JMENU_NAVIGATE);
+    navigate.add(item(JMENU_GO_TO_DEFINITION, KeyEvent.VK_F12, 0, this::goToDefinition));
+    navigate.add(item(JMENU_GO_TO_IMPLEMENTATION, KeyEvent.VK_F12, mask, this::goToImplementation));
+    navigate.add(item(JMENU_BACK, KeyEvent.VK_LEFT, InputEvent.ALT_DOWN_MASK, this::goBack));
+    bar.add(navigate);
     return bar;
   }
 
@@ -182,6 +217,7 @@ public final class EditorFrame extends JFrame {
   private boolean save(EditorTab tab) {
     try {
       tab.save();
+      refreshIndex();
       return true;
     } catch (IOException e) {
       showError("Cannot save " + tab.path() + ": " + e.getMessage());
@@ -247,6 +283,7 @@ public final class EditorFrame extends JFrame {
         }
         try {
           tab.reload();
+          refreshIndex();
         } catch (IOException e) {
           // file may be mid-write; the next tick tries again
         }
@@ -266,6 +303,115 @@ public final class EditorFrame extends JFrame {
             "File changed on disk",
             JOptionPane.YES_NO_OPTION);
     return choice == JOptionPane.YES_OPTION;
+  }
+
+  private void refreshIndex() {
+    indexRoot = root;
+    if (!indexQueued.compareAndSet(false, true)) {
+      return; // a build is already waiting and will read the latest root
+    }
+    indexer.execute(
+        () -> {
+          indexQueued.set(false);
+          try {
+            index = SymbolIndex.build(indexRoot);
+          } catch (IOException e) {
+            System.err.println("Indexing failed: " + e.getMessage());
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        });
+  }
+
+  private void goToDefinition() {
+    jump(false);
+  }
+
+  private void goToImplementation() {
+    jump(true);
+  }
+
+  private void jump(boolean implementations) {
+    EditorTab tab = current();
+    if (tab == null) {
+      return;
+    }
+    SymbolIndex snapshot = index;
+    if (snapshot == null) {
+      showError("The symbol index is not ready. Is universal-ctags installed?");
+      return;
+    }
+    String word = tab.wordAtCaret();
+    if (word.isEmpty()) {
+      return;
+    }
+    List<Symbol> found =
+        (implementations ? snapshot.implementations(word) : snapshot.definitions(word))
+            .stream()
+                .sorted(
+                    Comparator.comparing((Symbol s) -> !s.path().equals(tab.path()))
+                        .thenComparing(s -> s.path().toString())
+                        .thenComparingInt(Symbol::line))
+                .toList();
+    if (found.isEmpty()) {
+      JOptionPane.showMessageDialog(
+          this,
+          "No "
+              + (implementations ? "implementations" : "definitions")
+              + " found for '"
+              + word
+              + "'",
+          APP_NAME,
+          JOptionPane.INFORMATION_MESSAGE);
+      return;
+    }
+    Symbol target = found.size() == 1 ? found.get(0) : pick(found);
+    if (target == null) {
+      return;
+    }
+    backStack.push(new Location(tab.path(), tab.caretLine()));
+    if (backStack.size() > 100) {
+      backStack.removeLast();
+    }
+    openAt(target.path(), target.line());
+  }
+
+  private void goBack() {
+    Location previous = backStack.poll();
+    if (previous != null) {
+      openAt(previous.path(), previous.line());
+    }
+  }
+
+  private void openAt(Path path, int line) {
+    openFile(path);
+    EditorTab tab = current();
+    if (tab != null && tab.path().equals(path)) {
+      tab.goToLine(line);
+    }
+  }
+
+  private Symbol pick(List<Symbol> candidates) {
+    String[] labels = candidates.stream().map(this::label).toArray(String[]::new);
+    Object choice =
+        JOptionPane.showInputDialog(
+            this,
+            "Multiple matches:",
+            APP_NAME,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            labels,
+            labels[0]);
+    if (choice == null) {
+      return null;
+    }
+    return candidates.get(Arrays.asList(labels).indexOf(choice));
+  }
+
+  private String label(Symbol s) {
+    Path shown = s.path().startsWith(root) ? root.relativize(s.path()) : s.path();
+    String owner = s.simpleScope().isEmpty() ? "" : s.simpleScope() + " > ";
+    return owner + s.name() + "  [" + s.kind() + "]  " + shown + ":" + s.line();
   }
 
   private void showError(String message) {

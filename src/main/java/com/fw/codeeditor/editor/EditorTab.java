@@ -1,5 +1,7 @@
 package com.fw.codeeditor.editor;
 
+import java.awt.Point;
+import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -10,6 +12,7 @@ import java.util.function.Consumer;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.BadLocationException;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
@@ -142,6 +145,53 @@ public final class EditorTab extends RTextScrollPane {
     textArea.discardAllEdits();
     setDirty(false);
     SwingUtilities.invokeLater(() -> getVerticalScrollBar().setValue(scroll));
+  }
+
+  /** The identifier under or just before the caret, or an empty string. */
+  public String wordAtCaret() {
+    String text = textArea.getText();
+    int pos = textArea.getCaretPosition();
+    int start = pos;
+    while (start > 0 && Character.isJavaIdentifierPart(text.charAt(start - 1))) {
+      start--;
+    }
+    int end = pos;
+    while (end < text.length() && Character.isJavaIdentifierPart(text.charAt(end))) {
+      end++;
+    }
+    return text.substring(start, end);
+  }
+
+  /** The caret's line, 1-based. */
+  public int caretLine() {
+    try {
+      return textArea.getLineOfOffset(textArea.getCaretPosition()) + 1;
+    } catch (BadLocationException e) {
+      return 1;
+    }
+  }
+
+  /** Moves the caret to the start of the given 1-based line and centres it in the view. */
+  public void goToLine(int line) {
+    try {
+      int offset = textArea.getLineStartOffset(Math.max(0, line - 1));
+      textArea.setCaretPosition(offset);
+      SwingUtilities.invokeLater(
+          () -> {
+            try {
+              Rectangle2D r = textArea.modelToView2D(offset);
+              if (r != null) {
+                int y = Math.max(0, (int) r.getY() - getViewport().getHeight() / 2);
+                getViewport().setViewPosition(new Point(0, y));
+              }
+            } catch (BadLocationException e) {
+              // line vanished since the click: leave the view where it is
+            }
+          });
+    } catch (BadLocationException e) {
+      // the file is shorter than when it was indexed: stay where we are
+    }
+    focusEditor();
   }
 
   private void rememberDiskState() {

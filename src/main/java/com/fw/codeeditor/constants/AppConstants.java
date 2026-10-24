@@ -14,4 +14,10 @@ public final class AppConstants {
   public static final String JMENU_OPEN_FOLDER = "Open Folder...";
   public static final String JMENU_SAVE = "Save";
   public static final String JMENU_CLOSE_TAB = "Close Tab";
+  public static final String JMENU_NAVIGATE = "Navigate";
+  public static final String JMENU_GO_TO_DEFINITION = "Go to Definition";
+  public static final String JMENU_GO_TO_IMPLEMENTATION = "Go to Implementation";
+  public static final String JMENU_BACK = "Back";
+
+  public static final String CTAGS_COMMAND = "ctags";
 }
