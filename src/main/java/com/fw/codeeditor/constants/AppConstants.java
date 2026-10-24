@@ -18,6 +18,18 @@ public final class AppConstants {
   public static final String JMENU_GO_TO_DEFINITION = "Go to Definition";
   public static final String JMENU_GO_TO_IMPLEMENTATION = "Go to Implementation";
   public static final String JMENU_BACK = "Back";
+  public static final String JMENU_GO_TO_FILE = "Go to File";
+  public static final String JMENU_FIND_IN_FILES = "Find in Files";
 
   public static final String CTAGS_COMMAND = "ctags";
+
+  public static final String RG_COMMAND = "rg";
+  public static final String SEARCH_MAX_FILESIZE = "1M";
+  public static final int SEARCH_MAX_RESULTS = 200;
+  public static final int SEARCH_MAX_LINE_CHARS = 200;
+  public static final int SEARCH_MIN_QUERY_LENGTH = 2;
+  public static final int FILE_FINDER_DEBOUNCE_MS = 30;
+  public static final int GREP_DEBOUNCE_MS = 200;
+  public static final int FINDER_WIDTH = 700;
+  public static final int FINDER_HEIGHT = 420;
 }

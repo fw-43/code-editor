@@ -5,19 +5,27 @@ import static com.fw.codeeditor.constants.AppConstants.APP_HEIGHT;
 import static com.fw.codeeditor.constants.AppConstants.APP_NAME;
 import static com.fw.codeeditor.constants.AppConstants.APP_WIDTH;
 import static com.fw.codeeditor.constants.AppConstants.DISK_CHECK_INTERVAL_MS;
+import static com.fw.codeeditor.constants.AppConstants.FILE_FINDER_DEBOUNCE_MS;
+import static com.fw.codeeditor.constants.AppConstants.GREP_DEBOUNCE_MS;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_BACK;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_CLOSE_TAB;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_FILE;
+import static com.fw.codeeditor.constants.AppConstants.JMENU_FIND_IN_FILES;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_GO_TO_DEFINITION;
+import static com.fw.codeeditor.constants.AppConstants.JMENU_GO_TO_FILE;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_GO_TO_IMPLEMENTATION;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_NAVIGATE;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_OPEN_FOLDER;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_SAVE;
 import static com.fw.codeeditor.constants.AppConstants.JSCROLLPANE_MIN_HEIGHT;
 import static com.fw.codeeditor.constants.AppConstants.JSCROLLPANE_MIN_WIDTH;
+import static com.fw.codeeditor.constants.AppConstants.SEARCH_MAX_RESULTS;
+import static com.fw.codeeditor.constants.AppConstants.SEARCH_MIN_QUERY_LENGTH;
 
 import com.fw.codeeditor.index.Symbol;
 import com.fw.codeeditor.index.SymbolIndex;
+import com.fw.codeeditor.search.FuzzyMatcher;
+import com.fw.codeeditor.search.Ripgrep;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.KeyboardFocusManager;
@@ -36,6 +44,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -156,6 +165,13 @@ public final class EditorFrame extends JFrame {
     navigate.add(item(JMENU_GO_TO_DEFINITION, KeyEvent.VK_F12, 0, this::goToDefinition));
     navigate.add(item(JMENU_GO_TO_IMPLEMENTATION, KeyEvent.VK_F12, mask, this::goToImplementation));
     navigate.add(item(JMENU_BACK, KeyEvent.VK_LEFT, InputEvent.ALT_DOWN_MASK, this::goBack));
+    navigate.add(item(JMENU_GO_TO_FILE, KeyEvent.VK_P, mask, this::goToFile));
+    navigate.add(
+        item(
+            JMENU_FIND_IN_FILES,
+            KeyEvent.VK_F,
+            mask | InputEvent.SHIFT_DOWN_MASK,
+            this::findInFiles));
     bar.add(navigate);
     return bar;
   }
@@ -412,6 +428,71 @@ public final class EditorFrame extends JFrame {
     Path shown = s.path().startsWith(root) ? root.relativize(s.path()) : s.path();
     String owner = s.simpleScope().isEmpty() ? "" : s.simpleScope() + " > ";
     return owner + s.name() + "  [" + s.kind() + "]  " + shown + ":" + s.line();
+  }
+
+  private boolean ensureRipgrep() {
+    if (Ripgrep.isInstalled()) {
+      return true;
+    }
+    showError("ripgrep (rg) was not found. Install it with: sudo apt install ripgrep");
+    return false;
+  }
+
+  private void goToFile() {
+    if (!ensureRipgrep()) {
+      return;
+    }
+    Path base = root;
+    AtomicReference<List<Path>> cache = new AtomicReference<>();
+    FinderDialog<Path> dialog =
+        new FinderDialog<>(
+            this,
+            JMENU_GO_TO_FILE,
+            FILE_FINDER_DEBOUNCE_MS,
+            path -> base.relativize(path).toString(),
+            (query, cancelled) -> {
+              List<Path> files = cache.get();
+              if (files == null) {
+                files = Ripgrep.listFiles(base); // listed once per popup, on the worker thread
+                cache.set(files);
+              }
+              return FuzzyMatcher.rank(query, files, base, SEARCH_MAX_RESULTS);
+            },
+            this::openFile);
+    dialog.open("");
+  }
+
+  private void findInFiles() {
+    if (!ensureRipgrep()) {
+      return;
+    }
+    Path base = root;
+    EditorTab tab = current();
+    String initial = tab == null ? "" : tab.wordAtCaret();
+    FinderDialog<Ripgrep.Hit> dialog =
+        new FinderDialog<>(
+            this,
+            JMENU_FIND_IN_FILES,
+            GREP_DEBOUNCE_MS,
+            hit -> base.relativize(hit.path()) + ":" + hit.line() + "  " + hit.text(),
+            (query, cancelled) ->
+                query.strip().length() < SEARCH_MIN_QUERY_LENGTH
+                    ? List.of()
+                    : Ripgrep.search(base, query.strip(), SEARCH_MAX_RESULTS, cancelled),
+            hit -> navigateTo(hit.path(), hit.line()));
+    dialog.open(initial);
+  }
+
+  /** Like openAt, but remembers where you were so Alt+Left returns there. */
+  private void navigateTo(Path path, int line) {
+    EditorTab tab = current();
+    if (tab != null) {
+      backStack.push(new Location(tab.path(), tab.caretLine()));
+      if (backStack.size() > 100) {
+        backStack.removeLast();
+      }
+    }
+    openAt(path, line);
   }
 
   private void showError(String message) {
