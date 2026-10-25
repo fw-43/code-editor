@@ -1,9 +1,18 @@
 # Code-Editor
 
-## Features
-- <Ctrl+PageUp> to switch to left tab, <Ctrl+PageDown> to switch to right tab
+## Features (and Changes)
+- Update tab size
+- Tab navigation
+- Auto-reload EditorTab to reflect external changes (e.g. spotless)
 - Have the FileTree reacts if there is an external update to the files and directories in the project
 - Fuzzy-find filenames and grep contents
+- Go-to-definition & go-to-implementation
+
+## Dependencies
+- Java Swing components
+- RSyntaxTextArea 3.5.3
+- Flatlaf 3.5.4
+- Jackson Databind 2.18.2
 
 ## Swing Components
 ```
