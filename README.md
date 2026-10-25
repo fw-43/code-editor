@@ -7,6 +7,11 @@
 - Have the FileTree reacts if there is an external update to the files and directories in the project
 - Fuzzy-find filenames and grep contents
 - Go-to-definition & go-to-implementation
+- Save-all
+- Highlight focused tab
+- Update font size
+- Indentation marker in EditorTab
+- Indentation marker in FileTree
 
 ## Dependencies
 - Java Swing components
@@ -23,6 +28,7 @@ EditorFrame (JFrame)
 │   ├── JMenu "File"
 │   │   ├── JMenuItem "Open Folder..."       (Ctrl+O)
 │   │   ├── JMenuItem "Save"                 (Ctrl+S)
+│   │   ├── JMenuItem "Save All"             (Ctrl+Shift+S)
 │   │   └── JMenuItem "Close Tab"            (Ctrl+W)
 │   └── JMenu "Navigate"
 │       ├── JMenuItem "Go to Definition"     (F12)
@@ -55,6 +61,6 @@ FinderDialog (JDialog, owned by EditorFrame, created on demand)
 ## Run on Local
 ```bash
 ./gradlew spotlessApply clean build installDist
-# requires custom bash script
+## requires custom bash script
 code N-project-name
 ```

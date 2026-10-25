@@ -17,6 +17,7 @@ import static com.fw.codeeditor.constants.AppConstants.JMENU_GO_TO_IMPLEMENTATIO
 import static com.fw.codeeditor.constants.AppConstants.JMENU_NAVIGATE;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_OPEN_FOLDER;
 import static com.fw.codeeditor.constants.AppConstants.JMENU_SAVE;
+import static com.fw.codeeditor.constants.AppConstants.JMENU_SAVE_ALL;
 import static com.fw.codeeditor.constants.AppConstants.JSCROLLPANE_MIN_HEIGHT;
 import static com.fw.codeeditor.constants.AppConstants.JSCROLLPANE_MIN_WIDTH;
 import static com.fw.codeeditor.constants.AppConstants.SEARCH_MAX_RESULTS;
@@ -158,6 +159,7 @@ public final class EditorFrame extends JFrame {
     JMenu file = new JMenu(JMENU_FILE);
     file.add(item(JMENU_OPEN_FOLDER, KeyEvent.VK_O, mask, this::chooseFolder));
     file.add(item(JMENU_SAVE, KeyEvent.VK_S, mask, this::saveCurrent));
+    file.add(item(JMENU_SAVE_ALL, KeyEvent.VK_S, mask | InputEvent.SHIFT_DOWN_MASK, this::saveAll));
     file.add(item(JMENU_CLOSE_TAB, KeyEvent.VK_W, mask, this::closeCurrent));
     JMenuBar bar = new JMenuBar();
     bar.add(file);
@@ -227,6 +229,15 @@ public final class EditorFrame extends JFrame {
     EditorTab tab = current();
     if (tab != null) {
       save(tab);
+    }
+  }
+
+  private void saveAll() {
+    for (int i = 0; i < tabs.getTabCount(); i++) {
+      EditorTab tab = (EditorTab) tabs.getComponentAt(i);
+      if (tab.isDirty() && !save(tab)) {
+        return; // save() already showed the error, so stop and let you look at it
+      }
     }
   }
 

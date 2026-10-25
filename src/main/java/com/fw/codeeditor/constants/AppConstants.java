@@ -1,5 +1,7 @@
 package com.fw.codeeditor.constants;
 
+import java.awt.Color;
+
 public final class AppConstants {
 
   public static final String APP_NAME = "code-editor";
@@ -9,10 +11,12 @@ public final class AppConstants {
   public static final Integer JSCROLLPANE_MIN_WIDTH = 150;
   public static final Integer JSCROLLPANE_MIN_HEIGHT = 0;
   public static final int DISK_CHECK_INTERVAL_MS = 1000;
+  public static final int EDITOR_FONT_SIZE = 13;
 
   public static final String JMENU_FILE = "File";
   public static final String JMENU_OPEN_FOLDER = "Open Folder...";
   public static final String JMENU_SAVE = "Save";
+  public static final String JMENU_SAVE_ALL = "Save All";
   public static final String JMENU_CLOSE_TAB = "Close Tab";
   public static final String JMENU_NAVIGATE = "Navigate";
   public static final String JMENU_GO_TO_DEFINITION = "Go to Definition";
@@ -32,4 +36,9 @@ public final class AppConstants {
   public static final int GREP_DEBOUNCE_MS = 200;
   public static final int FINDER_WIDTH = 700;
   public static final int FINDER_HEIGHT = 420;
+
+  public static final Color TAB_ACCENT = new Color(0x4F9DFF);
+  public static final Color TAB_SELECTED_BACKGROUND = new Color(0x4B5052);
+  public static final Color INDENT_GUIDE_COLOR = new Color(0x75787A);
+  public static final int TAB_SELECTION_HEIGHT = 4;
 }

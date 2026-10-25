@@ -1,5 +1,9 @@
 package com.fw.codeeditor.editor;
 
+import static com.fw.codeeditor.constants.AppConstants.EDITOR_FONT_SIZE;
+import static com.fw.codeeditor.constants.AppConstants.INDENT_GUIDE_COLOR;
+
+import java.awt.Font;
 import java.awt.Point;
 import java.awt.geom.Rectangle2D;
 import java.io.IOException;
@@ -50,9 +54,14 @@ public final class EditorTab extends RTextScrollPane {
     this.path = path;
 
     textArea.setSyntaxEditingStyle(syntaxFor(path));
+    Font font = new Font(Font.MONOSPACED, Font.PLAIN, EDITOR_FONT_SIZE);
+    textArea.setFont(font);
+    getGutter().setLineNumberFont(font);
     textArea.setCodeFoldingEnabled(true);
     textArea.setTabsEmulated(true);
     textArea.setTabSize(2);
+    textArea.setPaintTabLines(true);
+    textArea.setTabLineColor(INDENT_GUIDE_COLOR);
     rememberDiskState();
     textArea.setText(Files.readString(path, StandardCharsets.UTF_8));
     textArea.setCaretPosition(0);
