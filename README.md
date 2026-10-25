@@ -13,15 +13,23 @@
 - RSyntaxTextArea 3.5.3
 - Flatlaf 3.5.4
 - Jackson Databind 2.18.2
+- Universal Ctags 5.9.0
+- Ripgrep 13.0.0
 
 ## Swing Components
 ```
 EditorFrame (JFrame)
 ├── JMenuBar
 │   └── JMenu "File"
-│       ├── JMenuItem "Open Folder..."   (Ctrl+O)
-│       ├── JMenuItem "Save"             (Ctrl+S)
-│       └── JMenuItem "Close Tab"        (Ctrl+W)
+│       ├── JMenuItem "Open Folder..."       (Ctrl+O)
+│       ├── JMenuItem "Save"                 (Ctrl+S)
+│       └── JMenuItem "Close Tab"            (Ctrl+W)
+│   └── JMenu "Navigate"
+│       ├── JMenuItem "Go to Definition"     (F12)
+│       ├── JMenuItem "Go to Implementation" (Ctrl+F12)
+│       ├── JMenuItem "Back"                 (Alt+Left)
+│       ├── JMenuItem "Go to File"           (Ctrl+P)
+│       ├── JMenuItem "Find in Files"        (Ctrl+Shift+F)
 │
 └── content pane (BorderLayout.CENTER)
     └── JSplitPane (horizontal)
@@ -37,6 +45,11 @@ EditorFrame (JFrame)
                 │   └── RSyntaxTextArea (extends JTextArea)
                 └── row header
                     └── Gutter (line numbers and fold indicators)
+
+FinderDialog (JDialog, owned by EditorFrame, created on demand)
+├── JTextField (query)
+└── JScrollPane
+    └── JList (results)
 ```
 
 ## Run on Local
