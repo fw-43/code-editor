@@ -1,5 +1,10 @@
 # Code-Editor
 
+## Features
+- <Ctrl+PageUp> to switch to left tab, <Ctrl+PageDown> to switch to right tab
+- Have the FileTree reacts if there is an external update to the files and directories in the project
+- Fuzzy-find filenames and grep contents
+
 ## Swing Components
 ```
 EditorFrame (JFrame)
