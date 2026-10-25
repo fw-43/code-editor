@@ -20,10 +20,10 @@
 ```
 EditorFrame (JFrame)
 ├── JMenuBar
-│   └── JMenu "File"
-│       ├── JMenuItem "Open Folder..."       (Ctrl+O)
-│       ├── JMenuItem "Save"                 (Ctrl+S)
-│       └── JMenuItem "Close Tab"            (Ctrl+W)
+│   ├── JMenu "File"
+│   │   ├── JMenuItem "Open Folder..."       (Ctrl+O)
+│   │   ├── JMenuItem "Save"                 (Ctrl+S)
+│   │   └── JMenuItem "Close Tab"            (Ctrl+W)
 │   └── JMenu "Navigate"
 │       ├── JMenuItem "Go to Definition"     (F12)
 │       ├── JMenuItem "Go to Implementation" (Ctrl+F12)
